@@ -5,7 +5,7 @@
 % License: CC-BY (http://creativecommons.org/licenses/by/4.0/)
 
 
-function [x_fit, y_fit, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data, y_axis_data, error_data, x_axis_unit)
+function [x_fit, y_fit, x_axis_data, y_axis_data, error_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data, y_axis_data, error_data, x_axis_unit)
 
 K = 'K_{m}';
 Xmax = 'V_{max}';
@@ -53,8 +53,8 @@ plot(x_line_x', y_line_x', 'Color', line_color, 'Linewidth', 1)
 plot(x_line_y', y_line_y', 'Color', line_color, 'Linewidth', 1)
 
 % Plot the original data points
-hold on
-errorbar(x_axis_data, y_axis_data, error_data, '.k', 'MarkerSize', 15);
+% hold on
+% errorbar(x_axis_data, y_axis_data, error_data, '.k', 'MarkerSize', 15);
 
 % Write Bmax and Kd in the plot window
 Xmax_str = [char(Xmax), ' = ~ ', num2str(sprintf('%.1f',round(fit_result.Bmax, 1))), ' ', char(unit_Xmax)];

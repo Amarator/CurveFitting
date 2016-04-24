@@ -22,7 +22,7 @@
 % Requires a minimum of 5 data points per data set.
 
 
-function [x_sig, y_sig, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit)
+function [x_sig, y_sig, working_c, working_data, working_error_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit)
 
 %====================== Input your data here! =============================
 
@@ -77,16 +77,12 @@ for ii = 1:data_size(1)
     % Make percent
     working_data = (y_axis_data(ii,:) / y_axis_data(ii,1)) * 100;
     if ~isempty(error_data)
-        working_error_data = (error_data(ii,:) / y_axis_data(ii,1));
+        working_error_data = (error_data(ii,:) / y_axis_data(ii,1)) * 100;
     end
         
     % Logarithmize x-axis values
     working_c_log = log10(x_axis_data);
-    
-    if ~isempty(error_data)
-        working_error_data = working_error_data*100;
-    end
-    
+
     % Set up the sigmoidal model
     curve = @(a, b, c, d, e, x) a./(b+exp(-c*(x-d)))+e;
     
@@ -136,11 +132,11 @@ for ii = 1:data_size(1)
     plot(x_line_y', y_line_y', 'Color', [.5 .5 .5], 'Linewidth', 1)
     
     % Plot errorbars and data points
-    if ~isempty(error_data)
-        errorbar(working_c, working_data, working_error_data, char(data_points), 'MarkerSize', round(sqrt(data_points_size)));
-    else
-        scatter(working_c, working_data, char(data_points));
-    end
+%     if ~isempty(error_data)
+%         errorbar(working_c, working_data, working_error_data, char(data_points), 'MarkerSize', round(sqrt(data_points_size)));
+%     else
+%         scatter(working_c, working_data, char(data_points));
+%     end
         
     % Range of the y-axis
     if isempty(error_data)

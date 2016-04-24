@@ -22,7 +22,7 @@ function varargout = CurveFitting(varargin)
 
 % Edit the above text to modify the response to help CurveFitting
 
-% Last Modified by GUIDE v2.5 24-Apr-2016 05:08:24
+% Last Modified by GUIDE v2.5 24-Apr-2016 18:03:40
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -61,6 +61,7 @@ guidata(hObject, handles);
 % Default values
 handles.mod_x = 0;
 handles.mod_y = 0;
+handles.my_marker = 'o';
 guidata(hObject, handles)
 
 % UIWAIT makes CurveFitting wait for user response (see UIRESUME)
@@ -126,26 +127,33 @@ switch char(fitOptions)
     case 'Biphasic (experimental)'
         
     case 'Michaelis-Menten'
-        [x_fit, y_fit, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data, y_axis_data, error_data, x_axis_unit);
+        [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data, y_axis_data, error_data, x_axis_unit);
     case 'Sigmoidal - IC50'
-        [x_fit, y_fit, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit);
+        [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit);
 end
 
+plot(x_fit, y_fit, '-r', 'Linewidth', 1.5)
 
-plot(x_fit, y_fit, '-r', 'Linewidth', 2)
+marker = [handles.my_marker 'k'];
 
+if sum(error_data) == 0
+    scatter(x_data, y_data, marker)
+else
+    errorbar(x_data, y_data, EB_data, marker, 'MarkerSize', sqrt(35))
+end
+    
 box off
 set(gca, 'Color', 'white')
 set(gca, 'FontName', 'Arial');
 set(gca, 'fontsize', 12);
 set(gca, 'LineWidth', 1)
-set(gca, 'TickLength', [0.025 0.0025])
+set(gca, 'TickLength', [0.02 0.002])
 set(gca, 'TickDir','out');
-
 xlabel(my_xlabels, 'FontSize', 14)
 ylabel(my_ylabels, 'FontSize', 14)
 
-% Get some info about axes
+
+% Get some info about axes properties
 handles.Xlinlog_orig = Xlinlog_orig;
 
 handles.Ylinlog_orig = Ylinlog_orig;
@@ -189,7 +197,6 @@ mydata = handles.mydata;
 
 val = get(hObject, 'Value');
 str = get(hObject, 'String');
-
 TabForm = str(val);
 
 switch char(TabForm)
@@ -208,6 +215,39 @@ my_title = mydata.textdata(2, 1);
 my_xlabels = mydata.textdata(2, 2);
 my_ylabels = mydata.textdata(2, 3);
 x_axis_unit = mydata.textdata(2, 4);
+
+errorbar(x_axis_data, y_axis_data, error_data, '--ok')
+
+box off
+set(gca, 'Color', 'white')
+set(gca, 'FontName', 'Arial');
+set(gca, 'fontsize', 12);
+set(gca, 'LineWidth', 1)
+set(gca, 'TickLength', [0.02 0.002])
+set(gca, 'TickDir','out');
+xlabel(my_xlabels, 'FontSize', 14)
+ylabel(my_ylabels, 'FontSize', 14)
+
+% Get some info about axes properties
+handles.Xlinlog_orig = 'lin';
+handles.Ylinlog_orig = 'lin';
+
+XTick_orig = get(gca, 'XTick');
+handles.XTick_orig = XTick_orig;
+handles.XTick_curr = XTick_orig;
+
+YTick_orig = get(gca, 'YTick');
+handles.YTick_orig = YTick_orig;
+handles.YTick_curr = YTick_orig;
+
+XLim_orig = get(gca, 'XLim');
+handles.XLim_orig = XLim_orig;
+handles.XLim_curr = XLim_orig;
+
+YLim_orig = get(gca, 'YLim');
+handles.YLim_orig = YLim_orig;
+handles.YLim_curr = YLim_orig;
+guidata(hObject, handles)
 
 
 % --- Executes during object creation, after setting all properties.
@@ -588,3 +628,90 @@ YTick_orig = handles.YTick_orig;
 set(gca, 'XTick', XTick_orig)
 set(gca, 'YTick', YTick_orig)
 
+
+% --- Executes on selection change in popupmenu4.
+function popupmenu4_Callback(hObject, eventdata, handles)
+% hObject    handle to popupmenu4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu4 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from popupmenu4
+
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu4_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to popupmenu4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on selection change in popupmenu_Marker.
+function popupmenu_Marker_Callback(hObject, eventdata, handles)
+% hObject    handle to popupmenu_Marker (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu_Marker contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from popupmenu_Marker
+
+val = get(hObject, 'Value');
+str = get(hObject, 'String');
+marker_input = str(val);
+
+switch char(marker_input)
+    case 'Asterisk'
+        handles.my_marker = '*';
+    case 'Circle'
+        handles.my_marker = 'o';
+    case 'Cross'
+        handles.my_marker = 'x';
+    case 'Diamond'
+        handles.my_marker = 'd';
+    case 'Plus sign'
+        handles.my_marker = '+';
+    case 'Point'
+        handles.my_marker = '.';
+    case 'Square'
+        handles.my_marker = 's';
+    case 'Star (5-pointed)'
+        handles.my_marker = 'p';
+    case 'Star (6-pointed)'
+        handles.my_marker = 'h';
+end
+
+guidata(hObject, handles)
+
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu_Marker_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to popupmenu_Marker (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in togglebutton_grid.
+function togglebutton_grid_Callback(hObject, eventdata, handles)
+% hObject    handle to togglebutton_grid (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of togglebutton_grid
+toggle_grid = get(hObject,'Value');
+if toggle_grid == 1
+    grid on
+else
+    grid off
+end

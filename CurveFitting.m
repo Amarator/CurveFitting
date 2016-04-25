@@ -52,6 +52,9 @@ function CurveFitting_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CurveFitting (see VARARGIN)
 
+clc
+clearvars -global
+
 % Choose default command line output for CurveFitting
 handles.output = hObject;
 
@@ -120,28 +123,32 @@ global my_ylabels
 global x_axis_unit
 
 fitOptions = handles.fitOptions;
-
 hold on
 
-switch char(fitOptions)
-    case 'Biphasic (experimental)'
-        
-    case 'Michaelis-Menten'
-        [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data, y_axis_data, error_data, x_axis_unit);
-    case 'Sigmoidal - IC50'
-        [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit);
-end
+data_size = size(x_axis_data);
 
-plot(x_fit, y_fit, '-r', 'Linewidth', 1.5)
-
-marker = [handles.my_marker 'k'];
-
-if sum(error_data) == 0
-    scatter(x_data, y_data, marker)
-else
-    errorbar(x_data, y_data, EB_data, marker, 'MarkerSize', sqrt(35))
-end
+for ii = 1:data_size(1)
+    switch char(fitOptions)
+        case 'Biphasic (experimental)'
+            
+        case 'Michaelis-Menten'
+            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit);
+        case 'Sigmoidal - IC50'
+            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit);
+    end
     
+    plot(x_fit, y_fit, '-', 'Linewidth', 1.5)
+    
+    marker = [handles.my_marker 'k'];
+    
+    if sum(error_data) == 0
+        scatter(x_data, y_data, marker)
+    else
+        errorbar(x_data, y_data, EB_data, marker, 'MarkerSize', sqrt(35))
+    end
+    
+end
+
 box off
 set(gca, 'Color', 'white')
 set(gca, 'FontName', 'Arial');
@@ -185,6 +192,9 @@ function popupmenu_TabForm_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu_TabForm contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu_TabForm
 
+cla reset
+clearvars -global
+
 global x_axis_data
 global y_axis_data
 global error_data
@@ -199,24 +209,30 @@ val = get(hObject, 'Value');
 str = get(hObject, 'String');
 TabForm = str(val);
 
+data_size = size(mydata.data);
+
+hold on
 switch char(TabForm)
     case 'Rows'
-        x_axis_data = mydata.data(1, :);
-        y_axis_data = mydata.data(3, :);
-        error_data = mydata.data(5, :);
-        
+        for ii = 1:(data_size(1)/3)
+            x_axis_data(ii, :) = mydata.data(ii+((ii-1)*2), :);
+            y_axis_data(ii, :) = mydata.data((ii+1)+((ii-1)*2), :);
+            error_data(ii, :) = mydata.data((ii+2)+((ii-1)*2), :);
+            errorbar(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), '--o')
+        end
     case 'Columns'
-        x_axis_data = mydata.data(:, 1)';
-        y_axis_data = mydata.data(:, 3)';
-        error_data = mydata.data(:, 5)';
+        for ii = 1:(data_size(2)/3)
+            x_axis_data(ii, :) = mydata.data(:, ii+((ii-1)*2))';
+            y_axis_data(ii, :) = mydata.data(:, (ii+1)+((ii-1)*2))';
+            error_data(ii, :) = mydata.data(:, (ii+2)+((ii-1)*2))';
+            errorbar(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), '--o')
+        end
 end
 
 my_title = mydata.textdata(2, 1);
 my_xlabels = mydata.textdata(2, 2);
 my_ylabels = mydata.textdata(2, 3);
 x_axis_unit = mydata.textdata(2, 4);
-
-errorbar(x_axis_data, y_axis_data, error_data, '--ok')
 
 box off
 set(gca, 'Color', 'white')

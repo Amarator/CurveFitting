@@ -53,7 +53,6 @@ function CurveFitting_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   command line arguments to CurveFitting (see VARARGIN)
 
 clc
-clearvars -global
 
 % Choose default command line output for CurveFitting
 handles.output = hObject;
@@ -123,30 +122,26 @@ global my_ylabels
 global x_axis_unit
 
 fitOptions = handles.fitOptions;
+
 hold on
 
-data_size = size(x_axis_data);
+switch char(fitOptions)
+    case 'Biphasic (experimental)'
+        
+    case 'Michaelis-Menten'
+        [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data, y_axis_data, error_data, x_axis_unit);
+    case 'Sigmoidal - IC50'
+        [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit);
+end
 
-for ii = 1:data_size(1)
-    switch char(fitOptions)
-        case 'Biphasic (experimental)'
-            
-        case 'Michaelis-Menten'
-            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit);
-        case 'Sigmoidal - IC50'
-            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit);
-    end
-    
-    plot(x_fit, y_fit, '-', 'Linewidth', 1.5)
-    
-    marker = [handles.my_marker 'k'];
-    
-    if sum(error_data) == 0
-        scatter(x_data, y_data, marker)
-    else
-        errorbar(x_data, y_data, EB_data, marker, 'MarkerSize', sqrt(35))
-    end
-    
+plot(x_fit, y_fit, '-r', 'Linewidth', 1.5)
+
+marker = [handles.my_marker 'k'];
+
+if sum(error_data) == 0
+    scatter(x_data, y_data, marker)
+else
+    errorbar(x_data, y_data, EB_data, marker, 'MarkerSize', sqrt(35))
 end
 
 box off
@@ -193,7 +188,15 @@ function popupmenu_TabForm_Callback(hObject, eventdata, handles)
 %        contents{get(hObject,'Value')} returns selected item from popupmenu_TabForm
 
 cla reset
-clearvars -global
+
+clear x_axis_data
+clear y_axis_data
+clear error_data
+clear my_title
+clear my_xlabels
+clear my_ylabels
+clear x_axis_unit 
+clear data_size
 
 global x_axis_data
 global y_axis_data
@@ -210,6 +213,7 @@ str = get(hObject, 'String');
 TabForm = str(val);
 
 data_size = size(mydata.data);
+mydata.data
 
 hold on
 switch char(TabForm)
@@ -221,13 +225,11 @@ switch char(TabForm)
             errorbar(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), '--o')
         end
     case 'Columns'
-        for ii = 1:(data_size(2)/3)
-            x_axis_data(ii, :) = mydata.data(:, ii+((ii-1)*2))';
-            y_axis_data(ii, :) = mydata.data(:, (ii+1)+((ii-1)*2))';
-            error_data(ii, :) = mydata.data(:, (ii+2)+((ii-1)*2))';
-            errorbar(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), '--o')
-        end
+        x_axis_data(ii, :) = mydata.data(:, ii+((ii-1)*2))'
+        y_axis_data(ii, :) = mydata.data(:, (ii+1)+((ii-1)*2))'
+        error_data(ii, :) = mydata.data(:, (ii+2)+((ii-1)*2))'
 end
+
 
 my_title = mydata.textdata(2, 1);
 my_xlabels = mydata.textdata(2, 2);
@@ -643,6 +645,29 @@ XTick_orig = handles.XTick_orig;
 YTick_orig = handles.YTick_orig;
 set(gca, 'XTick', XTick_orig)
 set(gca, 'YTick', YTick_orig)
+
+
+% --- Executes on selection change in popupmenu4.
+function popupmenu4_Callback(hObject, eventdata, handles)
+% hObject    handle to popupmenu4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu4 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from popupmenu4
+
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu4_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to popupmenu4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
 
 
 % --- Executes on selection change in popupmenu_Marker.

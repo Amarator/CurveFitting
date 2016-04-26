@@ -67,6 +67,16 @@ handles.mod_y = 0;
 handles.my_marker = 'o';
 guidata(hObject, handles)
 
+% Default axis state
+box off
+set(gca, 'LineWidth', 1)
+set(gca, 'TickLength', [0.02 0.02])
+set(gca, 'TickDir','out');
+
+% Default UI state
+handlesArray = [handles.pushbutton_FitCurve, handles.popupmenu_TabForm, handles.popupmenu_FitType, handles.popupmenu_Marker, handles.pushbutton_save];
+set(handlesArray, 'Enable', 'off');
+
 % UIWAIT makes CurveFitting wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
@@ -105,6 +115,8 @@ function pushbutton_LoadData_Callback(hObject, eventdata, handles)
 handles.mydata = importdata([DataSourcePath DataSourceName]);
 guidata(hObject, handles)
 
+set(handles.popupmenu_TabForm, 'Enable', 'on');
+
 
 % --- Executes on button press in pushbutton_FitCurve.
 function pushbutton_FitCurve_Callback(hObject, eventdata, handles)
@@ -117,10 +129,10 @@ cla reset
 global x_axis_data
 global y_axis_data
 global error_data
-global my_title
 global my_xlabels
 global my_ylabels
 global x_axis_unit
+global my_ids
 
 fitOptions = handles.fitOptions;
 hold on
@@ -137,14 +149,14 @@ for ii = 1:data_size(1)
             [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit);
     end
     
-    plot(x_fit, y_fit, '-', 'Linewidth', 1.5)
+    curve_plot(ii) = plot(x_fit, y_fit, '-', 'Linewidth', 1.5);
     
     marker = [handles.my_marker 'k'];
     
     if sum(error_data) == 0
         scatter(x_data, y_data, marker)
     else
-        errorbar(x_data, y_data, EB_data, marker, 'MarkerSize', sqrt(35))
+        errorbar(x_data, y_data, EB_data, 'MarkerSize', sqrt(35))
     end
     
 end
@@ -159,6 +171,11 @@ set(gca, 'TickDir','out');
 xlabel(my_xlabels, 'FontSize', 14)
 ylabel(my_ylabels, 'FontSize', 14)
 
+if ~isempty(char(my_ids))
+    legend(curve_plot, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
+end
+
+handles.curve_plot = curve_plot;
 
 % Get some info about axes properties
 handles.Xlinlog_orig = Xlinlog_orig;
@@ -202,6 +219,7 @@ global my_title
 global my_xlabels
 global my_ylabels
 global x_axis_unit
+global my_ids
 
 mydata = handles.mydata;
 
@@ -210,6 +228,7 @@ str = get(hObject, 'String');
 TabForm = str(val);
 
 data_size = size(mydata.data);
+text_size = size(mydata.textdata);
 
 hold on
 switch char(TabForm)
@@ -229,20 +248,28 @@ switch char(TabForm)
         end
 end
 
-my_title = mydata.textdata(2, 1);
-my_xlabels = mydata.textdata(2, 2);
-my_ylabels = mydata.textdata(2, 3);
-x_axis_unit = mydata.textdata(2, 4);
+my_title = mydata.textdata{2, 2};
+my_xlabels = mydata.textdata{2, 3};
+my_ylabels = mydata.textdata{2, 4};
+x_axis_unit = mydata.textdata{2, 5};
 
 box off
 set(gca, 'Color', 'white')
 set(gca, 'FontName', 'Arial');
 set(gca, 'fontsize', 12);
 set(gca, 'LineWidth', 1)
-set(gca, 'TickLength', [0.02 0.002])
+set(gca, 'TickLength', [0.02 0.02])
 set(gca, 'TickDir','out');
-xlabel(my_xlabels, 'FontSize', 14)
-ylabel(my_ylabels, 'FontSize', 14)
+xlabel(char(my_xlabels), 'FontSize', 14)
+ylabel(char(my_ylabels), 'FontSize', 14)
+
+if text_size(1) > 2
+    for ii = 1:(text_size(1)-1)
+        my_ids(ii, :) = mydata.textdata{ii+1, 1};
+        legend(char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
+    end
+end
+
 
 % Get some info about axes properties
 handles.Xlinlog_orig = 'lin';
@@ -265,6 +292,12 @@ handles.YLim_orig = YLim_orig;
 handles.YLim_curr = YLim_orig;
 guidata(hObject, handles)
 
+handlesArray = [handles.popupmenu_FitType, handles.pushbutton_save];
+set(handlesArray, 'Enable', 'on');
+
+
+
+
 
 % --- Executes during object creation, after setting all properties.
 function popupmenu_TabForm_CreateFcn(hObject, eventdata, handles)
@@ -286,6 +319,7 @@ function pushbutton_save_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 global my_title
+global my_ids
 
 % Choose save location
 ready_save = false;
@@ -313,7 +347,12 @@ set(gca, 'ActivePositionProperty', 'outerposition')
 set(gca, 'Units', 'normalized')
 set(gca, 'OuterPosition', [0 0 1 1])
 set(gca, 'position', [0.1300 0.1100 0.7750 0.8150])
+curve_plot = handles.curve_plot;
 title(my_title)
+
+if ~isempty(char(my_ids))
+    legend(ax, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
+end
 
 % Save figure as epsc, png, and fig at chosen location
 whereToStore_vec = fullfile(save_dir,[['Curve_Fitting_VectorGraphic_' char(my_title)] '.epsc']);
@@ -557,7 +596,6 @@ if Ylinlog_state == 0
     end
 end
 
-
 handles.YTick_curr = get(gca, 'YTick');
 handles.YLim_curr = get(gca, 'YLim');
 guidata(hObject, handles)
@@ -576,6 +614,9 @@ str = get(hObject, 'String');
 
 handles.fitOptions = str(val);
 guidata(hObject, handles)
+
+handlesArray = [handles.popupmenu_Marker, handles.pushbutton_FitCurve];
+set(handlesArray, 'Enable', 'on')
 
 
 % --- Executes during object creation, after setting all properties.

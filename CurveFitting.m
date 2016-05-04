@@ -22,7 +22,7 @@ function varargout = CurveFitting(varargin)
 
 % Edit the above text to modify the response to help CurveFitting
 
-% Last Modified by GUIDE v2.5 24-Apr-2016 18:03:40
+% Last Modified by GUIDE v2.5 29-Apr-2016 02:50:18
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -65,6 +65,7 @@ guidata(hObject, handles);
 handles.mod_x = 0;
 handles.mod_y = 0;
 handles.my_marker = 'o';
+handles.user_saved = true;
 guidata(hObject, handles)
 
 % Default axis state
@@ -138,26 +139,43 @@ fitOptions = handles.fitOptions;
 hold on
 
 data_size = size(x_axis_data);
+sample_no = data_size(1);
 
+param_count = 1;
 for ii = 1:data_size(1)
     switch char(fitOptions)
         case 'Biphasic (experimental)'
             
         case 'Michaelis-Menten'
-            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_MichaelisMenten(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit);
+            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig, fit_parameters] = CurveFitting_MichaelisMenten(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit, sample_no);
         case 'Sigmoidal - IC50'
-            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit);
+            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig, fit_parameters] = CurveFitting_sigmoid(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit, sample_no);
     end
     
     curve_plot(ii) = plot(x_fit, y_fit, '-', 'Linewidth', 1.5);
     
-    marker = [handles.my_marker 'k'];
-    
     if sum(error_data) == 0
         scatter(x_data, y_data, marker)
     else
-        errorbar(x_data, y_data, EB_data, 'MarkerSize', sqrt(35))
+        errorbar(x_data, y_data, EB_data, handles.my_marker, 'MarkerSize', sqrt(35))
     end
+    
+    for jj = 1:(length(fit_parameters)/2)
+        
+        if sample_no > 1
+            data_name = [char(my_ids(ii,:)), ' - ', char(fit_parameters(jj+jj-1))];
+        else
+            data_name = char(fit_parameters(jj+jj-1));
+            
+        end
+       
+        data_value = char(fit_parameters(jj*2));
+        data_sum(param_count, :) = {data_name data_value};
+        
+        param_count = param_count + 1;
+    end
+
+    set(handles.uitable_Parameters, 'Data', data_sum)
     
 end
 
@@ -176,6 +194,7 @@ if ~isempty(char(my_ids))
 end
 
 handles.curve_plot = curve_plot;
+handles.data_sum = data_sum;
 
 % Get some info about axes properties
 handles.Xlinlog_orig = Xlinlog_orig;
@@ -290,6 +309,8 @@ handles.XLim_curr = XLim_orig;
 YLim_orig = get(gca, 'YLim');
 handles.YLim_orig = YLim_orig;
 handles.YLim_curr = YLim_orig;
+
+handles.user_saved = false;
 guidata(hObject, handles)
 
 handlesArray = [handles.popupmenu_FitType, handles.pushbutton_save];
@@ -322,8 +343,8 @@ global my_title
 global my_ids
 
 % Choose save location
-ready_save = false;
-while ready_save == false
+user_saved = false;
+while user_saved == false
     save_dir = uigetdir('Desktop', 'Curve Fitting - Select Save Location');
     if save_dir == 0
         quest_h = questdlg('Data has not been saved, yet! Really cancel?', 'Cancel? - Curve Fitting', 'No', 'Yes', 'No');
@@ -332,7 +353,9 @@ while ready_save == false
             return
         end
     else
-        ready_save = true;
+        user_saved = true;
+        handles.user_saved = user_saved;
+        guidata(hObject, handles)
     end
 end
 
@@ -350,9 +373,15 @@ set(gca, 'position', [0.1300 0.1100 0.7750 0.8150])
 curve_plot = handles.curve_plot;
 title(my_title)
 
+char(my_ids)
+
 if ~isempty(char(my_ids))
-    legend(ax, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
+    legend(gca, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
+
+%     legend(ax, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
 end
+
+my_parameters = handles.data_sum;
 
 % Save figure as epsc, png, and fig at chosen location
 whereToStore_vec = fullfile(save_dir,[['Curve_Fitting_VectorGraphic_' char(my_title)] '.epsc']);
@@ -361,8 +390,20 @@ print(fig, whereToStore_vec, '-depsc', '-painters')
 whereToStore_png = fullfile(save_dir, [['Curve_Fitting_PNG_' char(my_title)], '.png']);
 print(fig, whereToStore_png, '-dpng', '-r300')
 
-whereToStore_fig = fullfile(save_dir, [['Curve_Fitting_MATLABfig_' char(my_title)], '.fig']);
-saveas(fig, whereToStore_fig)
+whereToStore_txt = fullfile(save_dir, [['Curve_Fitting_Parameters_' char(my_title)], '.txt']);
+loc_txt = fopen(whereToStore_txt, 'w');
+if isempty(char(my_ids))
+    fprintf(loc_txt, 'Parameter, Value\r\n');
+
+else
+    fprintf(loc_txt, 'Sample ID, Parameter, Value\r\n');
+end
+for ii = 1:length(my_parameters)
+        data_mkchar = [char(my_parameters(ii, 1)) ', ' char(my_parameters(ii, 2))];
+        data_export = strrep(data_mkchar, ' -', ', ');
+        fprintf(loc_txt, '%s\r\n', data_export);
+end
+fclose(loc_txt);
 
 
 function edit_yMax_Callback(hObject, eventdata, handles)
@@ -749,3 +790,25 @@ if toggle_grid == 1
 else
     grid off
 end
+
+
+
+% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: delete(hObject) closes the figure
+user_saved = handles.user_saved;
+if user_saved == false
+    quest_h = questdlg('Data has not been saved, yet! Really quit?', 'Quit? - Curve Fitting', 'No', 'Yes', 'No');
+    waitfor(quest_h)
+    if strcmp(quest_h, 'Yes') == 1
+        delete(hObject);
+    end
+else
+    delete(hObject);
+end
+
+

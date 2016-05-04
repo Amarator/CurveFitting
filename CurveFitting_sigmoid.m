@@ -22,7 +22,7 @@
 % Requires a minimum of 5 data points per data set.
 
 
-function [x_sig, y_sig, working_c, working_data, working_error_data, Xlinlog_orig, Ylinlog_orig] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit)
+function [x_sig, y_sig, working_c, working_data, working_error_data, Xlinlog_orig, Ylinlog_orig, parameters] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit, sample_no)
 
 %====================== Input your data here! =============================
 
@@ -187,16 +187,21 @@ for ii = 1:data_size(1)
     set(gca, 'xscale', 'log');
     Xlinlog_orig = 'log';
     Ylinlog_orig = 'lin';
+
+    if sample_no == 1
+        % Write IC50 values
+        str1 = ['IC_{50} = ~ ' char(ic50_str)];
+        ic50_x(ii) = x_bot*0.65;
+        ic50_y(ii) = (ic50_pos-10)*0.9;
+        text(ic50_x(ii),ic50_y(ii), str1, 'FontName', 'Arial', 'fontsize', 14, 'FontWeight', 'Demi')
+        
+        % Write RSQ values
+        rsquare_str = ['R^2 = ' num2str(sprintf('%.3f',round(gof.rsquare, 3)))];
+        text( x_ticks(ceil(length(x_ticks)/2))*10, y_top-10, rsquare_str, 'FontName', 'Arial', 'fontsize', 11)
+    end
     
-    % Write IC50 values
-    str1 = ['IC_{50} = ~ ' char(ic50_str)];
-    ic50_x(ii) = x_bot*0.65;
-    ic50_y(ii) = (ic50_pos-10)*0.9;
-    text(ic50_x(ii),ic50_y(ii), str1, 'FontName', 'Arial', 'fontsize', 14, 'FontWeight', 'Demi')
-    
-    % Write RSQ values
-    rsquare_str = ['R^2 = ' num2str(sprintf('%.3f',round(gof.rsquare, 3)))];
-    text( x_ticks(ceil(length(x_ticks)/2))*10, y_top-10, rsquare_str, 'FontName', 'Arial', 'fontsize', 11)
+    % Return IC50 and RSQs
+    parameters = {'IC50' char(ic50_str) 'RSQ' num2str(gof.rsquare)};
     
     % Set ticks
     set(gca, 'YTick', 0:20:y_top)

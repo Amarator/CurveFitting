@@ -113,7 +113,21 @@ function pushbutton_LoadData_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 [DataSourceName, DataSourcePath] = uigetfile({'*.xls'; '*.xlsx'}, 'Select File');
-handles.mydata = importdata([DataSourcePath DataSourceName]);
+
+[status,sheets] = xlsfinfo([DataSourcePath DataSourceName]);
+numOfSheets = numel(sheets);
+
+% Check whether imported Excel file holds more than one Sheet - if yes, use
+% first Sheet
+if numOfSheets > 1
+    handles.mySheet = char(sheets(1));
+else
+    handles.mySheet = 0;
+end
+
+myImportDoc = importdata([DataSourcePath DataSourceName]);
+handles.myImportDoc = myImportDoc;
+
 guidata(hObject, handles)
 
 set(handles.popupmenu_TabForm, 'Enable', 'on');
@@ -125,6 +139,7 @@ function pushbutton_FitCurve_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+% Reset axis
 cla reset
 
 global x_axis_data
@@ -152,12 +167,12 @@ for ii = 1:data_size(1)
             [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig, fit_parameters] = CurveFitting_sigmoid(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit, sample_no);
     end
     
-    curve_plot(ii) = plot(x_fit, y_fit, '-', 'Linewidth', 1.5);
+    curve_plot(ii) = plot(x_fit, y_fit, 'Color', handles.my_LineColor(ii, :), 'Linewidth', 1.5, 'LineStyle', '-');
     
     if sum(error_data) == 0
-        scatter(x_data, y_data, marker)
+        scatter(x_data, y_data, handles.my_marker, 'MarkerEdgeColor', handles.my_MarkerColor(ii, :))
     else
-        errorbar(x_data, y_data, EB_data, handles.my_marker, 'MarkerSize', sqrt(35))
+        errorbar(x_data, y_data, EB_data, handles.my_marker, 'MarkerSize', sqrt(35), 'MarkerEdgeColor', handles.my_MarkerColor(ii, :))
     end
     
     for jj = 1:(length(fit_parameters)/2)
@@ -168,17 +183,18 @@ for ii = 1:data_size(1)
             data_name = char(fit_parameters(jj+jj-1));
             
         end
-       
+        
         data_value = char(fit_parameters(jj*2));
         data_sum(param_count, :) = {data_name data_value};
         
         param_count = param_count + 1;
     end
-
+    
     set(handles.uitable_Parameters, 'Data', data_sum)
     
 end
 
+% Format axis
 box off
 set(gca, 'Color', 'white')
 set(gca, 'FontName', 'Arial');
@@ -189,6 +205,7 @@ set(gca, 'TickDir','out');
 xlabel(my_xlabels, 'FontSize', 14)
 ylabel(my_ylabels, 'FontSize', 14)
 
+% If more than one data set is plotted, insert legend in axis
 if ~isempty(char(my_ids))
     legend(curve_plot, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
 end
@@ -240,37 +257,60 @@ global my_ylabels
 global x_axis_unit
 global my_ids
 
-mydata = handles.mydata;
+sheet = handles.mySheet;
+
+if sheet == 0
+    myData = handles.myImportDoc.data;
+    myTextData = handles.myImportDoc.textdata;
+else
+    myData = handles.myImportDoc.data.(sheet);
+    myTextData = handles.myImportDoc.textdata.(sheet);
+end
 
 val = get(hObject, 'Value');
 str = get(hObject, 'String');
 TabForm = str(val);
 
-data_size = size(mydata.data);
-text_size = size(mydata.textdata);
+data_size = size(myData);
+text_size = size(myTextData);
+
+if text_size(1) > 2
+    for ii = 1:(text_size(1)-1)
+        my_ids(ii, :) = myTextData{ii+1, 1};
+        legend(char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
+        my_LineColor(ii,:) = uisetcolor([0 0 0], ['Line Color - ', my_ids(ii,:)]);
+        my_MarkerColor(ii,:) = uisetcolor([1 0 0], ['Marker Color - ', my_ids(ii,:)]);
+    end
+else
+    my_LineColor(ii,:) = uisetcolor([0 0 0], 'Choose Line Color');
+    my_MarkerColor(ii,:) = uisetcolor([1 0 0], 'Choose Marker Color');   
+end
+
+handles.my_LineColor = my_LineColor;
+handles.my_MarkerColor = my_MarkerColor;
 
 hold on
 switch char(TabForm)
     case 'Rows'
         for ii = 1:(data_size(1)/3)
-            x_axis_data(ii, :) = mydata.data(ii+((ii-1)*2), :);
-            y_axis_data(ii, :) = mydata.data((ii+1)+((ii-1)*2), :);
-            error_data(ii, :) = mydata.data((ii+2)+((ii-1)*2), :);
-            errorbar(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), '--o')
+            x_axis_data(ii, :) = myData(ii+((ii-1)*2), :);
+            y_axis_data(ii, :) = myData((ii+1)+((ii-1)*2), :);
+            error_data(ii, :) = myData((ii+2)+((ii-1)*2), :);
+            errorbar(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), 'LineStyle', '--', 'Color', handles.my_LineColor(ii, :), 'Marker', handles.my_marker, 'MarkerSize', sqrt(35), 'MarkerEdgeColor', handles.my_MarkerColor(ii, :))
         end
     case 'Columns'
         for ii = 1:(data_size(2)/3)
-            x_axis_data(ii, :) = mydata.data(:, ii+((ii-1)*2))';
-            y_axis_data(ii, :) = mydata.data(:, (ii+1)+((ii-1)*2))';
-            error_data(ii, :) = mydata.data(:, (ii+2)+((ii-1)*2))';
-            errorbar(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), '--o')
+            x_axis_data(ii, :) = myData(:, ii+((ii-1)*2))';
+            y_axis_data(ii, :) = myData(:, (ii+1)+((ii-1)*2))';
+            error_data(ii, :) = myData(:, (ii+2)+((ii-1)*2))';
+            errorbar(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), 'LineStyle', '--', 'Color', handles.my_LineColor(ii, :), 'Marker', handles.my_marker, 'MarkerSize', sqrt(35), 'MarkerEdgeColor', handles.my_MarkerColor(ii, :))
         end
 end
 
-my_title = mydata.textdata{2, 2};
-my_xlabels = mydata.textdata{2, 3};
-my_ylabels = mydata.textdata{2, 4};
-x_axis_unit = mydata.textdata{2, 5};
+my_title = myTextData{2, 2};
+my_xlabels = myTextData{2, 3};
+my_ylabels = myTextData{2, 4};
+x_axis_unit = myTextData{2, 5};
 
 box off
 set(gca, 'Color', 'white')
@@ -284,11 +324,10 @@ ylabel(char(my_ylabels), 'FontSize', 14)
 
 if text_size(1) > 2
     for ii = 1:(text_size(1)-1)
-        my_ids(ii, :) = mydata.textdata{ii+1, 1};
+        my_ids(ii, :) = myTextData{ii+1, 1};
         legend(char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
     end
 end
-
 
 % Get some info about axes properties
 handles.Xlinlog_orig = 'lin';
@@ -377,8 +416,8 @@ char(my_ids)
 
 if ~isempty(char(my_ids))
     legend(gca, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
-
-%     legend(ax, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
+    
+    %     legend(ax, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
 end
 
 my_parameters = handles.data_sum;
@@ -394,14 +433,14 @@ whereToStore_txt = fullfile(save_dir, [['Curve_Fitting_Parameters_' char(my_titl
 loc_txt = fopen(whereToStore_txt, 'w');
 if isempty(char(my_ids))
     fprintf(loc_txt, 'Parameter, Value\r\n');
-
+    
 else
     fprintf(loc_txt, 'Sample ID, Parameter, Value\r\n');
 end
 for ii = 1:length(my_parameters)
-        data_mkchar = [char(my_parameters(ii, 1)) ', ' char(my_parameters(ii, 2))];
-        data_export = strrep(data_mkchar, ' -', ', ');
-        fprintf(loc_txt, '%s\r\n', data_export);
+    data_mkchar = [char(my_parameters(ii, 1)) ', ' char(my_parameters(ii, 2))];
+    data_export = strrep(data_mkchar, ' -', ', ');
+    fprintf(loc_txt, '%s\r\n', data_export);
 end
 fclose(loc_txt);
 

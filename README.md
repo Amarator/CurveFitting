@@ -5,5 +5,7 @@
 ### Data Format
 
 <table>
-<tr>A</tr>
+  <tr>
+    <td>A</td>
+  </tr>
 </table>

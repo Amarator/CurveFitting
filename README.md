@@ -1,3 +1,5 @@
-## CurveFitting
+# CurveFitting
 
-#Import Data
+## Import Data
+
+### Data Format

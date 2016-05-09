@@ -4,8 +4,8 @@
 
 ### Data Format
 
-x-axis data | y-axis data | error data
-...
-
-IDs | Title | xlabels | ylabels | Unit
-...
+<table>
+<ul>
+<li>test</li>
+</ul>
+</table>

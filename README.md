@@ -4,6 +4,7 @@
 
 ### Data Format
 
+Column-Format:
 <table>
   <tr>
     <td>x-axis data</td>

@@ -1,11 +1,8 @@
-% sigmoid_curve_fitting
+% CurveFitting_sigmoid
 % This is a script for plotting sigmoidal curves of best fit.
 %
-% Original script "sigmoid_curve_fitting"
-% by Peter Ghazal and Steven Watterson (17.7.2012)
-% Available on: https://figshare.com/articles/Matlab_Script_for_fitting_sigmoidal_curves_to_infection_inhibition_data./97311
-% used under CC-BY (http://creativecommons.org/licenses/by/4.0/)
-%
+% Original script "sigmoid_curve_fitting" available at https://figshare.com/articles/Matlab_Script_for_fitting_sigmoidal_curves_to_infection_inhibition_data./97311
+% 
 % Modified by Sven T. Bitters (21.3.2016) - sven.bitters@gmail.com
 % - Refactored code and improved usability for working with data not 
 %   related to infection inhibition
@@ -15,6 +12,11 @@
 %   (e.g. ticks, axes lengths)
 % - Included my default data
 %
+% Copyright (C) 2012, Peter Ghazal and Steven Watterson
+% Released under CC-BY.
+% 
+% The terms of the Creative Commons Attribution 4.0 International Public License can be found under http://creativecommons.org/licenses/by/4.0/.
+% 
 %
 % Works with MATLAB R2015b and Curve Fitting Toolbox 3.5.2
 %
@@ -22,9 +24,7 @@
 % Requires a minimum of 5 data points per data set.
 
 
-function [x_sig, y_sig, working_c, working_data, working_error_data, Xlinlog_orig, Ylinlog_orig, parameters] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit, sample_no)
-
-%====================== Input your data here! =============================
+function [x_sig, y_sig, working_c, working_data, working_error_data, Xlinlog_orig, Ylinlog_orig, parameters] = CurveFitting_sigmoid(x_axis_data, y_axis_data, error_data, x_axis_unit, sample_no, minRegX, maxRegX, pointsRegX)
 
 % Set all data < 0 to 0 --> plausibility
 y_axis_data(y_axis_data<0) = 0;
@@ -93,8 +93,24 @@ for ii = 1:data_size(1)
     
     coeffs = coeffvalues(fit_op);
     
+    % Set up the range and the number of points
+    % used for plotting the regression curve
+    if isempty(minRegX)
+        minRegX = min(working_c_log);
+    end
+    
+    if isempty(maxRegX)
+        maxRegX = max(working_c_log);
+    end
+    
+    if isempty(pointsRegX)
+        distRegXpoints = (maxRegX-minRegX)/1000;
+    else
+        distRegXpoints = (maxRegX-minRegX)/pointsRegX;
+    end
+    
     % Extract points from the fitting model for plotting
-    x_sig = min(working_c_log):((max(working_c_log)-min(working_c_log))/1000):max(working_c_log);
+    x_sig = minRegX:distRegXpoints:maxRegX;
     y_sig = curve(coeffs(1), coeffs(2), coeffs(3), coeffs(4), coeffs(5), x_sig);
         
     % Reverse logarithmization
@@ -119,7 +135,7 @@ for ii = 1:data_size(1)
     ic50_log = fzero(objective, 1);
     
     ic50 = 10.^ic50_log;
-    ic50_rnd = round(ic50);
+    ic50_rnd = round(ic50, 3);
     ic50_str = strcat(num2str(ic50_rnd), {' '}, x_axis_unit);
     
     % Plot lines indicating the IC50 value

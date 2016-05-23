@@ -1,11 +1,25 @@
-% MichaelisMenten_Kx
+% CurveFitting_MichaelisMenten
 % This is a script for determining Kx and Xmax values from kinetic measurements.
-%
-% Created by Sven T. Bitters (3/2016) - sven.bitters@gmail.com
-% License: CC-BY (http://creativecommons.org/licenses/by/4.0/)
+% Copyright (C) 2016, Sven T. Bitters
+% Contact: sven.bitters@gmail.com
+%      
+% This file is part of CurveFitting.
+% 
+% CurveFitting_MichaelisMenten is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+% 
+% CurveFitting_MichaelisMenten is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+% 
+% You should have received a copy of the GNU General Public License
+% along with CurveFitting_MichaelisMenten. If not, see http://www.gnu.org/licenses/.
 
 
-function [x_fit, y_fit, x_axis_data, y_axis_data, error_data, Xlinlog_orig, Ylinlog_orig, parameters] = CurveFitting_MichaelisMenten(x_axis_data, y_axis_data, error_data, x_axis_unit, sample_no)
+function [x_fit, y_fit, x_axis_data, y_axis_data, error_data, Xlinlog_orig, Ylinlog_orig, parameters] = CurveFitting_MichaelisMenten(x_axis_data, y_axis_data, error_data, x_axis_unit, sample_no, minRegX, maxRegX, pointsRegX)
 
 K = 'K_{m}';
 Xmax = 'V_{max}';
@@ -34,9 +48,22 @@ foptions = fitoptions('Method', 'NonlinearLeastSquares', 'Lower',[0 0], 'StartPo
 
 [xDat_curve, yDat_curve] = prepareCurveData(x_axis_data, y_axis_data);
 [fit_result, gof] = fit(xDat_curve, yDat_curve, ft, foptions);
+ 
+% Set up the range and the number of points
+% used for plotting the regression curve
+if isempty(minRegX)
+    minRegX = -10;
+end
 
-% Extract points from the fitting model for plotting
-x_fit = linspace(-10, x_axis_data(end)*200, x_axis_data(end)*20000);
+if isempty(maxRegX)
+    maxRegX = x_axis_data(end)*2
+end
+
+if isempty(pointsRegX)
+    pointsRegX = (maxRegX - minRegX)*100
+end
+
+x_fit = linspace(minRegX, maxRegX, pointsRegX);
 y_fit = (fit_result.Xmax*x_fit)./(fit_result.Kx + x_fit);
 
 % Draw indicator line for Xmax
@@ -58,15 +85,24 @@ plot(x_line_y', y_line_y', 'Color', line_color, 'Linewidth', 1)
 
 if sample_no == 1
     % Write Xmax and Kx in the plot window
-    Xmax_str = [char(Xmax), ' = ~ ', num2str(sprintf('%.1f',round(fit_result.Xmax, 1))), ' ', char(unit_Xmax)];
+    Xmax_str = [char(Xmax), ' = ~ ', num2str(sprintf('%.3f',round(fit_result.Xmax, 3))), ' ', char(unit_Xmax)];
     text(fit_result.Kx*0.025, fit_result.Xmax*0.925, Xmax_str, 'FontName', 'Arial', 'fontsize', 12, 'FontWeight', 'Demi')
     
-    K_str = [K, ' = ~ ', num2str(sprintf('%.1f',round(fit_result.Kx, 1))), ' ', char(x_axis_unit)];
+    K_str = [K, ' = ~ ', num2str(sprintf('%.3f',round(fit_result.Kx, 3))), ' ', char(x_axis_unit)];
     text(fit_result.Kx*1.025, fit_result.Xmax*0.05, K_str, 'FontName', 'Arial', 'fontsize', 12, 'FontWeight', 'Demi')
     
     % Write Rsq in the plot window
     rsquared_str = ['R^2 =  ',  num2str(sprintf('%.3f',round(gof.rsquare,3)))];
     text(max(x_axis_data)*1.15, fit_result.Xmax*1.1, rsquared_str, 'FontName', 'Arial', 'fontsize', 12)
+end
+
+switch quest_MM
+    case 'Km and Vmax'
+        K = 'Km';
+        Xmax = 'Vmax';
+    case 'Kd and Bmax'
+        K = 'Kd';
+        Xmax = 'Bmax';
 end
 
 % Return Xmax, Kx, and Rsq

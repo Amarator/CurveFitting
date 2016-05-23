@@ -1,3 +1,24 @@
+% CurveFitting
+% Tool for the collection and evaluation of pixel saturation data in micrographs.
+% Copyright (C) 2016, Sven T. Bitters
+% Contact: sven.bitters@gmail.com
+%      
+% This file is part of CurveFitting.
+% 
+% CurveFitting is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+% 
+% CurveFitting is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+% 
+% You should have received a copy of the GNU General Public License
+% along with CurveFitting. If not, see http://www.gnu.org/licenses/.
+
+
 function varargout = CurveFitting(varargin)
 % CurveFitting MATLAB code for CurveFitting.fig
 %      CurveFitting, by itself, creates a new CurveFitting or raises the existing
@@ -22,7 +43,7 @@ function varargout = CurveFitting(varargin)
 
 % Edit the above text to modify the response to help CurveFitting
 
-% Last Modified by GUIDE v2.5 29-Apr-2016 02:50:18
+% Last Modified by GUIDE v2.5 21-May-2016 06:31:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -64,8 +85,16 @@ guidata(hObject, handles);
 % Default values
 handles.mod_x = 0;
 handles.mod_y = 0;
+
 handles.my_marker = 'o';
+
 handles.user_saved = true;
+
+handles.advOptsFlag = 0;
+handles.minRegressionX = [];
+handles.maxRegressionX = [];
+handles.pointsRegressionX = [];
+
 guidata(hObject, handles)
 
 % Default axis state
@@ -75,22 +104,22 @@ set(gca, 'TickLength', [0.02 0.02])
 set(gca, 'TickDir','out');
 
 % Default UI state
-handlesArray = [handles.pushbutton_FitCurve, handles.popupmenu_TabForm, handles.popupmenu_FitType, handles.popupmenu_Marker, handles.pushbutton_save];
+handlesArray = [handles.pushbutton_FitCurve, handles.popupmenu_TabForm, handles.popupmenu_FitType, handles.popupmenu_Marker, handles.pushbutton_save, handles.edit_minRegX, handles.edit_maxRegX, handles.edit_pointsReg];
 set(handlesArray, 'Enable', 'off');
 
 % UIWAIT makes CurveFitting wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
+% uiwait(handles.figure2602);
 
 % CHECK FOR UPDATES
 % This program version
 ThisVersion = '1.0';
 
 % Get the latest version
-[NewVersion,status] = urlread('https://raw.githubusercontent.com/Amarator/CurveFitting/master/CurrentVersion');
+[NewVersion,status] = urlread('https://raw.githubusercontent.com/s-bit/CurveFitting/master/CurrentVersion');
 
 % Check if latest version is newer than this version
 if status ~=0 && str2double(ThisVersion)<str2double(NewVersion)
-    msg_h = msgbox('A newer version of CurveFitting is available.', 'Update Notice');
+    msg_h = msgbox('A newer version of CurveFitting is available! How to download:      "About" > "Download Update"', 'Update Notice');
     waitfor(msg_h)
 end
 
@@ -112,7 +141,7 @@ function pushbutton_LoadData_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-[DataSourceName, DataSourcePath] = uigetfile({'*.xls'; '*.xlsx'}, 'Select File');
+[DataSourceName, DataSourcePath] = uigetfile({'*.xlsx'; '*.xls'}, 'Select File');
 
 [status,sheets] = xlsfinfo([DataSourcePath DataSourceName]);
 numOfSheets = numel(sheets);
@@ -139,6 +168,8 @@ function pushbutton_FitCurve_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+axes(handles.axes_OutputFig);
+
 % Reset axis
 cla reset
 
@@ -149,6 +180,17 @@ global my_xlabels
 global my_ylabels
 global x_axis_unit
 global my_ids
+
+% Parameters for regression plot
+if handles.advOptsFlag == 1
+    minRegX = handles.minRegressionX;
+    maxRegX = handles.maxRegressionX;
+    pointsRegX = handles.pointsRegressionX;
+else
+    minRegX = [];
+    maxRegX = [];
+    pointsRegX = [];
+end
 
 fitOptions = handles.fitOptions;
 hold on
@@ -162,9 +204,9 @@ for ii = 1:data_size(1)
         case 'Biphasic (experimental)'
             
         case 'Michaelis-Menten'
-            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig, fit_parameters] = CurveFitting_MichaelisMenten(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit, sample_no);
+            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig, fit_parameters] = CurveFitting_MichaelisMenten(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit, sample_no, minRegX, maxRegX, pointsRegX);
         case 'Sigmoidal - IC50'
-            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig, fit_parameters] = CurveFitting_sigmoid(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit, sample_no);
+            [x_fit, y_fit, x_data, y_data, EB_data, Xlinlog_orig, Ylinlog_orig, fit_parameters] = CurveFitting_sigmoid(x_axis_data(ii,:), y_axis_data(ii,:), error_data(ii,:), x_axis_unit, sample_no, minRegX, maxRegX, pointsRegX);
     end
     
     curve_plot(ii) = plot(x_fit, y_fit, 'Color', handles.my_LineColor(ii, :), 'Linewidth', 1.5, 'LineStyle', '-');
@@ -244,7 +286,6 @@ function popupmenu_TabForm_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu_TabForm contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu_TabForm
-
 cla reset
 clearvars -global
 
@@ -274,6 +315,7 @@ TabForm = str(val);
 data_size = size(myData);
 text_size = size(myTextData);
 
+warning('off','MATLAB:legend:PlotEmpty')
 if text_size(1) > 2
     for ii = 1:(text_size(1)-1)
         my_ids(ii, :) = myTextData{ii+1, 1};
@@ -282,9 +324,10 @@ if text_size(1) > 2
         my_MarkerColor(ii,:) = uisetcolor([1 0 0], ['Marker Color - ', my_ids(ii,:)]);
     end
 else
-    my_LineColor(ii,:) = uisetcolor([0 0 0], 'Choose Line Color');
-    my_MarkerColor(ii,:) = uisetcolor([1 0 0], 'Choose Marker Color');   
+    my_LineColor = uisetcolor([0 0 0], 'Choose Line Color');
+    my_MarkerColor = uisetcolor([1 0 0], 'Choose Marker Color');   
 end
+warning('on','MATLAB:legend:PlotEmpty')
 
 handles.my_LineColor = my_LineColor;
 handles.my_MarkerColor = my_MarkerColor;
@@ -356,9 +399,6 @@ handlesArray = [handles.popupmenu_FitType, handles.pushbutton_save];
 set(handlesArray, 'Enable', 'on');
 
 
-
-
-
 % --- Executes during object creation, after setting all properties.
 function popupmenu_TabForm_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to popupmenu_TabForm (see GCBO)
@@ -384,7 +424,7 @@ global my_ids
 % Choose save location
 user_saved = false;
 while user_saved == false
-    save_dir = uigetdir('Desktop', 'Curve Fitting - Select Save Location');
+    save_dir = uigetdir('Curve Fitting - Select Save Location');
     if save_dir == 0
         quest_h = questdlg('Data has not been saved, yet! Really cancel?', 'Cancel? - Curve Fitting', 'No', 'Yes', 'No');
         waitfor(quest_h)
@@ -398,51 +438,55 @@ while user_saved == false
     end
 end
 
+waitbar_handle = waitbar(0, 'Saving Data...');
+
 % Create new (invisible) figure and copy axes' content into the new figure
-GUI_fig_children = get(gcf, 'children');
-Fig_Axes = findobj(GUI_fig_children, 'type', 'Axes');
 fig = figure('Visible', 'off');
 ax = axes;
 clf;
-new_handle = copyobj(Fig_Axes, fig);
+new_handle = copyobj(handles.axes_OutputFig, fig);
 set(gca, 'ActivePositionProperty', 'outerposition')
 set(gca, 'Units', 'normalized')
 set(gca, 'OuterPosition', [0 0 1 1])
 set(gca, 'position', [0.1300 0.1100 0.7750 0.8150])
 curve_plot = handles.curve_plot;
 title(my_title)
-
-char(my_ids)
+waitbar(1/5)
 
 if ~isempty(char(my_ids))
-    legend(gca, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
+%     legend(gca, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
     
     %     legend(ax, char(my_ids), 'Location', 'northoutside', 'Orientation', 'horizontal')
 end
 
-my_parameters = handles.data_sum;
-
 % Save figure as epsc, png, and fig at chosen location
-whereToStore_vec = fullfile(save_dir,[['Curve_Fitting_VectorGraphic_' char(my_title)] '.epsc']);
+whereToStore_vec = fullfile(save_dir,[['CurveFitting_' char(my_title) '_VectorGraphic'] '.epsc']);
 print(fig, whereToStore_vec, '-depsc', '-painters')
+waitbar(2/5)
 
-whereToStore_png = fullfile(save_dir, [['Curve_Fitting_PNG_' char(my_title)], '.png']);
+whereToStore_png = fullfile(save_dir, [['CurveFitting_' char(my_title) '_PNG'], '.png']);
 print(fig, whereToStore_png, '-dpng', '-r300')
+waitbar(3/5)
 
-whereToStore_txt = fullfile(save_dir, [['Curve_Fitting_Parameters_' char(my_title)], '.txt']);
+whereToStore_txt = fullfile(save_dir, [['CurveFitting_' char(my_title) '_Parameters'], '.txt']);
 loc_txt = fopen(whereToStore_txt, 'w');
 if isempty(char(my_ids))
-    fprintf(loc_txt, 'Parameter, Value\r\n');
-    
+    fprintf(loc_txt, 'Parameter; Value\r\n');
 else
-    fprintf(loc_txt, 'Sample ID, Parameter, Value\r\n');
+    fprintf(loc_txt, 'Sample ID; Parameter; Value\r\n');
 end
+waitbar(4/5)
+
+my_parameters = handles.data_sum;
 for ii = 1:length(my_parameters)
-    data_mkchar = [char(my_parameters(ii, 1)) ', ' char(my_parameters(ii, 2))];
-    data_export = strrep(data_mkchar, ' -', ', ');
+    data_mkchar = [char(my_parameters(ii, 1)) '; ' char(my_parameters(ii, 2))];
+    data_export_point = strrep(data_mkchar, ' -', '; ');
+    data_export = strrep(data_export_point, '.', ',');
     fprintf(loc_txt, '%s\r\n', data_export);
 end
 fclose(loc_txt);
+waitbar(5/5)
+close(waitbar_handle)
 
 
 function edit_yMax_Callback(hObject, eventdata, handles)
@@ -731,7 +775,7 @@ function Menu_QM_Update_Callback(hObject, eventdata, handles)
 % hObject    handle to Menu_QM_Update (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-web('https://github.com/Amarator/CurveFitting', '-browser')
+web('https://github.com/s-bit/CurveFitting', '-browser')
 
 
 % --- Executes on button press in pushbutton_revOriginal.
@@ -832,9 +876,9 @@ end
 
 
 
-% --- Executes when user attempts to close figure1.
-function figure1_CloseRequestFcn(hObject, eventdata, handles)
-% hObject    handle to figure1 (see GCBO)
+% --- Executes when user attempts to close figure2602.
+function figure2602_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to figure2602 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
@@ -851,3 +895,156 @@ else
 end
 
 
+
+
+% --- Executes on button press in checkbox_advancedOpts.
+function checkbox_advancedOpts_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox_advancedOpts (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox_advancedOpts
+
+handlesArray = [handles.edit_minRegX, handles.edit_maxRegX, handles.edit_pointsReg];
+if get(hObject, 'Value') == 1
+   set(handlesArray, 'Enable', 'on')
+   handles.advOptsFlag = 1;
+else
+    set(handlesArray, 'Enable', 'off')
+    handles.advOptsFlag = 0;
+end
+guidata(hObject, handles)
+
+
+function edit_minRegX_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_minRegX (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit_minRegX as text
+%        str2double(get(hObject,'String')) returns contents of edit_minRegX as a double
+
+input_val = get(hObject, 'String');
+
+if isempty(input_val)
+    handles.minRegressionX = [];
+    set(hObject,'String','Edit...')
+else
+    handles.minRegressionX = str2double(input_val);
+end
+guidata(hObject, handles)
+
+
+% --- Executes during object creation, after setting all properties.
+function edit_minRegX_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_minRegX (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function edit_maxRegX_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_maxRegX (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit_maxRegX as text
+%        str2double(get(hObject,'String')) returns contents of edit_maxRegX as a double
+
+input_val = get(hObject, 'String');
+
+if isempty(input_val)
+    handles.maxRegressionX = [];
+    set(hObject,'String','Edit...')
+else
+    handles.maxRegressionX = str2double(input_val);
+end
+guidata(hObject, handles)
+
+
+% --- Executes during object creation, after setting all properties.
+function edit_maxRegX_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_maxRegX (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit_pointsReg_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_pointsReg (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit_pointsReg as text
+%        str2double(get(hObject,'String')) returns contents of edit_pointsReg as a double
+input_val = get(hObject, 'String');
+
+if isempty(input_val)
+    handles.pointsRegressionX = [];
+    set(hObject,'String','Edit...')
+else
+    handles.pointsRegressionX = str2double(input_val);
+end
+guidata(hObject, handles)
+
+
+% --- Executes during object creation, after setting all properties.
+function edit_pointsReg_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_pointsReg (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --------------------------------------------------------------------
+function Menu_QM_License_Callback(hObject, eventdata, handles)
+% hObject    handle to Menu_QM_License (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+gpl_license_p1 = ...
+    {'CurveFitting' ...
+    'Toolbox for the non-linear regression analysis of experimental data.' ...
+    '' ...
+    'Copyright (C) 2016, Sven T. Bitters' ...
+    'Contact: sven.bitters@gmail.com' ...
+    ''};
+
+gpl_license_p3 = ...
+    {'-------------------------------------------------------------------' ...   
+    '' ...
+    'CurveFitting_sigmoid' ...
+    'This is a script for plotting sigmoidal curves of best fit.' ...
+    '' ...
+    'Original script "sigmoid_curve_fitting.m" available at https://figshare.com/articles/Matlab_Script_for_fitting_sigmoidal_curves_to_infection_inhibition_data./97311' ...
+    '' ...
+    'Modified by Sven T. Bitters (21.3.2016)' ...
+    '- Refactored code and improved usability for working with data' ...
+    '  not related to infection inhibition' ...
+    '- Revised IC50 determination method' ...
+    '- Introduced dynamic determination of various aspects concerning' ... 
+    '  plotting (e.g. ticks, axes lengths)' ...
+    '' ...
+    'Copyright (C) 2012, Peter Ghazal and Steven Watterson' ...
+    'Released under CC-BY.' ...
+    '' ...
+    'The terms of the Creative Commons Attribution 4.0 International Public License can be found under http://creativecommons.org/licenses/by/4.0/.' ...
+    };
+
+GNU_GPL_License(gpl_license_p1, gpl_license_p3)

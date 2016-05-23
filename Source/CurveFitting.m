@@ -1,5 +1,5 @@
 % CurveFitting
-% Tool for the collection and evaluation of pixel saturation data in micrographs.
+% Easy to use tool for non-linear regression analyses and plotting.
 % Copyright (C) 2016, Sven T. Bitters
 % Contact: sven.bitters@gmail.com
 %      

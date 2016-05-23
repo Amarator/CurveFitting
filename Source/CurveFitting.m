@@ -112,7 +112,7 @@ set(handlesArray, 'Enable', 'off');
 
 % CHECK FOR UPDATES
 % This program version
-ThisVersion = '1.0';
+ThisVersion = '0.1';
 
 % Get the latest version
 [NewVersion,status] = urlread('https://raw.githubusercontent.com/s-bit/CurveFitting/master/CurrentVersion');
